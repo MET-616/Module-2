@@ -1,0 +1,195 @@
+---
+title: "MET AD 616 Assignment 2"
+author: "JingjianGao"
+date: "2023-11-15"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question #1 
+
+## a)
+```{r}
+num_trials <- 10000
+sample_size <- 100
+
+set.seed(100) 
+sums <- replicate(num_trials, sum(runif(sample_size, 0, 1)))
+
+mean_sums <- mean(sums)
+sd_sums <- sd(sums)
+
+# i)
+hist(sums, breaks = 30, probability = TRUE, main = "Sum of 100 Uniform Random Variables",
+     xlab = "Sum", ylab = "Density")
+
+# ii)
+curve(dnorm(x, mean = sample_size * 0.5, sd = sqrt(sample_size * 1/12)),
+      col = "Green", lwd = 2, add = TRUE)
+
+# iii)
+cat("The Mean of simulation is", mean_sums, "\n")
+cat("The Standard deviation of simulation is", sd_sums, "\n")
+
+```
+## b)
+```{r}
+num_trials <- 10000
+sample_size <- 10
+k <- 3
+
+set.seed(101)  
+third_lowest <- replicate(num_trials, sort(runif(sample_size, 0, 1))[k])
+
+mean_third_lowest <- mean(third_lowest)
+sd_third_lowest <- sd(third_lowest)
+
+# i)
+hist(third_lowest, breaks = 30, probability = TRUE, main = "3rd Lowest Value of 10 Uniform Random Variables",
+     xlab = "Value", ylab = "Density")
+
+# ii)
+curve(dbeta(x, shape1 = k, shape2 = sample_size + 1 - k), col = "blue", lwd = 2, add = TRUE)
+
+# iii)
+cat("The Mean of simulation is", mean_third_lowest, "\n")
+cat("The Standard deviation of simulation is", sd_third_lowest, "\n")
+
+```
+
+## Question #2
+
+```{r}
+num_trials <- 10000
+rate <- 10  
+
+set.seed(101)
+purchases_per_day <- replicate(num_trials, rpois(1, rate))
+
+hist(purchases_per_day, breaks = seq(min(purchases_per_day), max(purchases_per_day) + 1, by = 1),
+     main = "Number of Customer Purchases per Day", xlab = "Purchases", ylab = "Frequency")
+
+# Poisson Distribution with λ=10
+x <- 0:max(purchases_per_day)
+lines(x, dpois(x, rate), col = "blue", lwd = 2)
+
+
+
+```
+
+## Question #3
+
+```{r}
+set.seed(103)
+num_trials <- 10000
+shape <- 4.5
+scale <- 39
+term <- 20
+monthly_payment <- 115
+death_benefit <- 1000000
+lapsing_prob <- 0.003
+discount_rate <- 0.065
+initial_cost <- monthly_payment * 12 * term
+
+
+npv_values <- replicate(num_trials, {
+  cash_flows <- initial_cost
+  for (i in 1:term * 12) {
+    prob_death <- 1 - pweibull(i, shape, scale)
+    cash_flows <- cash_flows + monthly_payment * (1 - lapsing_prob) * (1 - prob_death)
+    if (runif(1) < prob_death && cash_flows > death_benefit) {
+      cash_flows <- cash_flows - death_benefit
+    }
+  }
+  cash_flows / (1 + discount_rate)^(1:term*12)
+})
+
+# a) 
+hist(npv_values, breaks = 30, main = "Net Present Value (NPV) Histogram",
+     xlab = "NPV", ylab = "Frequency")
+
+# b)
+mean_npv <- mean(npv_values)
+sd_npv <- sd(npv_values)
+cat("The Mean NPV is", mean_npv, "\n")
+cat("The Standard Deviation of NPV is", sd_npv, "\n")
+
+# c) 
+ci_95 <- quantile(npv_values, c(0.025, 0.975))
+cat("The 95% Confidence Interval for Mean NPV is", ci_95, "\n")
+
+# d) 
+desired_half_width <- 200
+
+iterations_for_99_ci <- ceiling(qnorm(0.995) * sd_npv / desired_half_width)^2
+cat("The number of Iterations for 99% CI with $200 Half-Width is", iterations_for_99_ci, "\n")
+
+# e) NPV at 90% and 99% Confidence
+npv_90_percent <- quantile(npv_values, 0.1)
+npv_99_percent <- quantile(npv_values, 0.01)
+cat("The NPV at 90% Confidence is", npv_90_percent, "\n")
+cat("The NPV at 99% Confidence is", npv_99_percent, "\n")
+
+# Now with the assumption of having 1,000 policyholders
+set.seed(104)
+num_trials <- 1000
+shape <- 4.5
+scale <- 39
+term <- 20
+monthly_payment <- 115
+death_benefit <- 1000000
+lapsing_prob <- 0.003
+discount_rate <- 0.065
+initial_cost <- monthly_payment * 12 * term
+
+npv_values_all_policyholders <- list()
+
+for (j in 1:num_trials) {
+  npv_values <- replicate(num_trials, {
+    cash_flows <- initial_cost
+    for (i in 1:term * 12) {
+      prob_death <- 1 - pweibull(i, shape, scale)
+      cash_flows <- cash_flows + monthly_payment * (1 - lapsing_prob) * (1 - prob_death)
+      if (runif(1) < prob_death && cash_flows > death_benefit) {
+        cash_flows <- cash_flows - death_benefit
+      }
+    }
+    cash_flows / (1 + discount_rate)^(1:term*12)
+  })
+  npv_values_all_policyholders[[j]] <- npv_values
+}
+
+all_npv_values <- unlist(npv_values_all_policyholders)
+
+# a)
+hist(all_npv_values, breaks = 30, main = "Net Present Value (NPV) for 1000 Policyholders",
+     xlab = "NPV", ylab = "Frequency")
+
+# b) 
+mean_npv_all <- mean(all_npv_values)
+sd_npv_all <- sd(all_npv_values)
+cat("The Mean NPV for 1000 Policyholders is", mean_npv_all, "\n")
+cat("The Standard Deviation of NPV for 1000 Policyholders is", sd_npv_all, "\n")
+
+# c)
+ci_95_all <- quantile(all_npv_values, c(0.025, 0.975))
+cat("The 95% Confidence Interval for Mean NPV of 1000 Policyholders is", ci_95_all, "\n")
+
+# d) 
+iterations_for_99_ci_all <- ceiling(qnorm(0.995) * sd_npv_all / desired_half_width)^2
+cat("The number of Iterations for 99% CI with $200 Half-Width for 1000 Policyholders is", iterations_for_99_ci_all, "\n")
+
+# e) NPV at 90% and 99% Confidence
+npv_90_percent_all <- quantile(all_npv_values, 0.1)
+npv_99_percent_all <- quantile(all_npv_values, 0.01)
+cat("The NPV at 90% Confidence for 1000 Policyholders is", npv_90_percent_all, "\n")
+cat("The NPV at 99% Confidence for 1000 Policyholders is", npv_99_percent_all, "\n")
+
+
+```
+
